@@ -1,1 +1,1 @@
-Solar data preparing for Deep Learning
+Solar data preparing using SunPy for GenEUV
