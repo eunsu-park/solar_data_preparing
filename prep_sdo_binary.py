@@ -5,6 +5,73 @@ import astropy.units as u
 from sunpy.image.rescale import resample
 from numba import jit
 
+
+class PrepSDO:
+    
+    def __init__(self):
+        
+        self.evaluation()
+        
+        if np.prod(self.eva) > 0 :
+            
+            self.run()
+
+    def read_fits(self, fits):
+        
+        self.map_sdo = Map(fits)
+        
+    def evaluation(self):
+        
+        self.eva = []
+        self.detector = self.map_sdo.meta['detector']
+        self.eva.append(True) if self.detector.lower() in ['aia', 'hmi'] else self.eva.append(False)
+        
+        self.quality = self.map_sdo.meta['quality']
+        self.eva.append(True) if int(self.quality) == 0 else self.eva.append(False)
+        
+
+    def define(self):
+        
+        map_sdo = Map(self.fits)
+
+        self.detector = map_sdo.meta['detector']
+        assert self.detector.lower() in ['aia', 'hmi'], 'The file is neither AIA nor HMI'
+        self.quality = map_sdo.meta['quality']
+        
+        if self.detector.lower() == 'aia' :
+            wavelength = map_sdo.meta['wavelnth']
+            self.type_instr = str(wavelength)
+            
+        else :
+            type1 = map_sdo.meta['content'][0]
+            type2 = str(int(map_sdo.meta['cadence'])) + 'S'
+            self.type_instr = type1 + '_' + type2
+        
+        
+        
+    
+    wavelnth = map_sdo.meta['wavelnth']
+    quality = map_sdo.meta['quality']
+    t_rec = map_sdo.meta['t_rec']
+    
+    
+
+    if detector == 'AIA':
+        type_instr = str(wavelnth)
+    elif detector == 'HMI' :
+        type1 = map_sdo.meta['content'][0]
+        type2 = str(int(map_sdo.meta['cadence'])) + 'S'
+        type_instr = type1 + '_' + type2
+    else :
+        raise NameError('File is neither AIA nor HMI')
+
+
+
+
+
+
+
+
 def hmi_cutting(data_hmi, isize, rsun):
     data_hmi_new = np.where(np.isnan(data_hmi), np.nanmin(data_hmi), data_hmi)
     for i in range(isize):
@@ -29,9 +96,14 @@ def prep_and_resize(fits, isize_target, rsun_target):
     map_sdo = Map(fits)
 
     detector = map_sdo.meta['detector']
+    assert detector.lower() in ['aia', 'hmi'], 'The file is neither AIA nor HMI'
+    
+    
     wavelnth = map_sdo.meta['wavelnth']
     quality = map_sdo.meta['quality']
     t_rec = map_sdo.meta['t_rec']
+    
+    
 
     if detector == 'AIA':
         type_instr = str(wavelnth)
