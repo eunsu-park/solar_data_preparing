@@ -38,8 +38,11 @@ while year le 2017 do begin
             file_mkdir, path_save
             name_save = string(path_save, preped.filename, format = '%s/%s.fits')
             print, name_save
-            data = preped.data
-            writefits, name_save, data, header
+            data = float(preped.data)
+            head_struct = preped.header
+            head_str = struct2fitshead(head_struct)
+            help, head_str
+            writefits, name_save, data, head_str
 
           endif
         endif
@@ -148,31 +151,32 @@ function main, H, D, isize, rsun
     endelse
   endelse
 
+  data_pad = data
 
-  rsun_orig = header.r_sun
-  isize_orig = header.naxis1
+;  rsun_orig = header.r_sun
+;  isize_orig = header.naxis1
 
-  isize_new = fix(isize_orig * rsun / rsun_orig)
-  if isize_new mod 2 eq 1 then isize_new += 1
+;  isize_new = fix(isize_orig * rsun / rsun_orig)
+;  if isize_new mod 2 eq 1 then isize_new += 1
 
-  data_con = congrid(data, isize_new, isize_new, /interp, /center)
+;  data_con = congrid(data, isize_new, isize_new, /interp, /center)
 
-  psize = fix((isize - isize_new)/2.)
+;  psize = fix((isize - isize_new)/2.)
 
-  if psize gt 0 then begin
-    data_pad = make_array(isize, isize)
-    data_pad[psize-1:psize+isize_new-2, psize-1:psize+isize_new-2]=data_con
-  endif else begin
-    if psize lt 0 then begin
-      data_pad = data_con[abs(psize):isize_new-abs(psize)-1, abs(psize):isize_new-abs(psize)-1]
-    endif else begin
-      data_pad = data_con
-    endelse
-  endelse
+;  if psize gt 0 then begin
+;    data_pad = make_array(isize, isize)
+;    data_pad[psize-1:psize+isize_new-2, psize-1:psize+isize_new-2]=data_con
+;  endif else begin
+;    if psize lt 0 then begin
+;      data_pad = data_con[abs(psize):isize_new-abs(psize)-1, abs(psize):isize_new-abs(psize)-1]
+;    endif else begin
+;      data_pad = data_con
+;    endelse
+;  endelse
 
   filename = strjoin([instr, type_instr, datetime], '_')
 
-  return, {data:data_pad, instr:instr, type_instr:type_instr, datetime:datetime, filename:filename}
+  return, {data:data_pad, header:header, instr:instr, type_instr:type_instr, datetime:datetime, filename:filename}
 
 end
 
