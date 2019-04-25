@@ -1,17 +1,28 @@
 pro PrepSDO
 
 root_data = '/home/joshua/NAS/'
-
-root_aia = root_data + 'AIA'
-root_hmi = root_data + 'HMI'
-
 root_save = '/home/joshua/github_storage/datasets/'
-save_aia = root_save + 'AIA'
-save_hmi = root_save + 'HMI'
 
-read, wavelnth, prompt = 'Wavelength?     '
+;read, instr, prompt = 'AIA or HMI?     '
 
-year = 2011
+root_sdo = root_data + 'HMI'
+save_sdo = root_save + 'HMI'
+
+;root_aia = root_data + 'AIA'
+;root_hmi = root_data + 'HMI'
+
+;save_aia = root_save + 'AIA'
+;save_hmi = root_save + 'HMI'
+
+;read, wavelnth, prompt = 'Wavelength?     '
+
+catch, err
+if err ne 0 then begin
+  catch, /cancel
+  goto, skip
+endif
+
+year = 2017
 while year le 2017 do begin
 
   month = 1
@@ -20,23 +31,38 @@ while year le 2017 do begin
     day = 1
     while day le 31 do begin
 
-      hour = 1
+      hour = 0
       while hour le 23 do begin
 
-        path_load = string(root_aia, wavelnth, year, month, day, format = '%s/%d/%04d/%02d/%02d')
-        file_load = string(path_load, wavelnth, year, month, day, hour, format = '%s/AIA_%d_%04d_%02d_%02d_%02d_00_*.fits')
-        list_load = file_search(file_load, count = nn)
+;        path_load = string(root_sdo, wavelnth, year, month, day, format = '%s/%d/%04d/%02d/%02d')
+;        path_save = string(save_sdo, wavelnth, year, month, day, format = '%s/%d/%04d/%02d/%02d')
+;        file_load = string(path_load, wavelnth, year, month, day, hour, format = '%s/AIA_%d_%04d_%02d_%02d_%02d_00_*.fits')
+;        list_load = file_search(file_load, count = nn)
+;        list_save = file_search(string(path_save, wavelnth, year, month, day, hour, format = '%s/AIA_%d_%04d_%02d_%02d_%02d_00_*.fits'), count = mm)
 
-        if nn gt 0 then begin
+        path_load = string(root_sdo, year, month, day, format = '%s/M_720S/%04d/%02d/%02d')
+        path_save = string(save_sdo, year, month, day, format = '%s/M_720S/%04d/%02d/%02d')
+        file_load = string(path_load, year, month, day, hour, format = '%s/HMI_M_720S_%04d_%02d_%02d_%02d_00_*.fits')
+        list_load = file_search(file_load, count = nn)
+        list_save = file_search(string(path_save, year, month, day, hour, format = '%s/HMI_M_720S_%04d_%02d_%02d_%02d_00_*.fits'), count = mm)
+
+
+
+
+        if nn gt 0 and mm eq 0 then begin
 
           fits = list_load[0]
-          read_sdo, fits, H, D, /noshell
+          read_sdo, fits, H, D, /noshell, /uncomp_delete
           if fix(H.quality) eq 0 then begin
 
+
             preped = main(H, D, 2048, 896)
-            path_save = string(save_aia, wavelnth, year, month, day, format = '%s/%d/%04d/%02d/%02d')
+
+            catch, /cancel
+            
             file_mkdir, path_save
             name_save = string(path_save, preped.filename, format = '%s/%s.fits')
+
             print, name_save
             data = float(preped.data)
             head_struct = preped.header
@@ -44,10 +70,13 @@ while year le 2017 do begin
             help, head_str
             writefits, name_save, data, head_str
 
+
           endif
         endif
 
-        hour += 1
+        skip : print, 'Error!'
+
+        hour += 6
       endwhile
       day += 1
     endwhile
@@ -129,20 +158,27 @@ function main, H, D, isize, rsun
 
   t_rec = header.t_rec
   instr = strmid(header.instrume, 0, 3)
-  wavelnth = strsplit(fix(header.wavelnth), ' ', /extract)
-  exptime = header.exptime
 
-  date = strmid(t_rec, 0, 10)
-  time = strmid(t_rec, 11, 8)
-  datetime = strjoin([strsplit(date, '-', /extract),strsplit(time, ':', /extract)], '_')
 
   if instr eq 'AIA' then begin
+
+    date = strmid(t_rec, 0, 10)
+    time = strmid(t_rec, 11, 8)
+    datetime = strjoin([strsplit(date, '-', /extract),strsplit(time, ':', /extract)], '_')
+
+    wavelnth = strsplit(fix(header.wavelnth), ' ', /extract)
     type_instr = wavelnth
+    exptime = header.exptime
     ratio_aia = find_ratio(t_rec, wavelnth)
     data = (data*ratio_aia)/exptime
     
   endif else begin
-    if Instrument eq 'HMI' then begin
+    if instr eq 'HMI' then begin
+
+      date = strmid(t_rec, 0, 10)
+      time = strmid(t_rec, 11, 8)
+      datetime = strjoin([strsplit(date, '.', /extract),strsplit(time, ':', /extract)], '_')
+
       type1 = strmid(header.content, 0, 1)
       type2 = strsplit(fix(header.cadence), ' ', /extract) + 'S'
       type_instr = type1 + '_' + type2
@@ -158,7 +194,6 @@ function main, H, D, isize, rsun
 
 ;  isize_new = fix(isize_orig * rsun / rsun_orig)
 ;  if isize_new mod 2 eq 1 then isize_new += 1
-
 ;  data_con = congrid(data, isize_new, isize_new, /interp, /center)
 
 ;  psize = fix((isize - isize_new)/2.)
