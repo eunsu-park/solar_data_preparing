@@ -1,1 +1,3 @@
-Solar data preparing using SunPy for GenEUV
+# Data Preparing
+
+Solar Data Preparing using SunPy/Python and SSW/IDL
