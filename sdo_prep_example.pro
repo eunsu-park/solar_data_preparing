@@ -1,16 +1,12 @@
 pro sdo_prep_example
 
-fits_sdo = '***.fits'
+fits_sdo = '/home/joshua/HMI_M_720S_2011_12_01_00_00_00.fits'
 
-read_sdo, fits_sdo, header, data
-aia_prep, header, data, header_new, data_new
+preped_and_resize = sdo_prep_and_resize(fits_sdo, 1024, 392)
+preped = sdo_prep(fits_sdo)
 
-t_rec = header_new.t_rec
-wavelnth = strsplit(fix(header_new.wavelnth), ' ', /extract)
-response_ratio = aia_find_ratio(t_rec, wavelnth)
-
-data_compensated = data_new * response_ratio
-data_intscale = aia_bytescale(data_intscale, wavelnth)
+data = preped_and_resize.data>(-100.)<(100.)
+tvscl, data
 
 end
 
