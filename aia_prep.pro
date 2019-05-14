@@ -14,7 +14,7 @@ function aia_prep, header, data
     ratio_aia = aia_find_ratio(t_rec, wavelnth)
     data = (data*ratio_aia)/exptime
   endif else begin
-    message, string(instr, format='Invalid Instrument: %s')
+    message, string(instr, format='Invalid Instrument: %s, This function is for AIA')
   endelse
 
   filename = strjoin([instr, type_instr, datetime], '_')
