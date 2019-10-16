@@ -1,8 +1,8 @@
 import math
 
-def hmsm_to_days(hour=0,min=0,sec=0,micro=0):
-    days = sec + (micro / 1.e6)
-    days = min + (days / 60.)
+def hmsm_to_days(hour=0,minute=0,second=0,msecond=0):
+    days = second + (msecond / 1.e6)
+    days = minute + (days / 60.)
     days = hour + (days / 60.)
     return days / 24.
 
