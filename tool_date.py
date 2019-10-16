@@ -6,6 +6,16 @@ def hmsm_to_days(hour=0,minute=0,second=0,msecond=0):
     days = hour + (days / 60.)
     return days / 24.
 
+def days_to_hmsm(days):
+    hours = days * 24.
+    hours, hour = math.modf(hours)
+    minutes = hours * 60.
+    minutes, minute = math.modf(minutes)
+    seconds = minutes * 60.
+    seconds, second = math.modf(seconds)
+    msecond = round(seconds * 1.e6)
+    return int(hour), int(minute), int(second), int(msecond)
+
 def date_to_jd(year,month,day):
     if month == 1 or month == 2:
         yearp = year - 1
@@ -51,18 +61,3 @@ def jd_to_date(jd):
     else:
         year = D - 4715
     return year, month, day
-
-def days_to_hmsm(days):
-    hours = days * 24.
-    hours, hour = math.modf(hours)
-    mins = hours * 60.
-    mins, min = math.modf(mins)
-    secs = mins * 60.
-    secs, sec = math.modf(secs)
-    micro = round(secs * 1.e6)
-    return int(hour), int(min), int(sec), int(micro)
-
-
-
-
-
