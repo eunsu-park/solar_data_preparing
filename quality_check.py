@@ -67,7 +67,7 @@ This class will work for MDI level 1.5, and SDO (AIA and HMI) level 1 quality bi
             else :
                 raise NameError('%s: Unidentified instrument name\nfor now, only MDI, SDO(AIA and HMI) is available'%(instr.upper()))
     def __call__(self, q):
-        h = int(q, 16)
+        h = int(str(q), 16)
         b = bin(h)
         l = len(b) - 2
         n = 1
