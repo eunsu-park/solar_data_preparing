@@ -25,6 +25,7 @@ class sdo_prep:
         data = data/exptime
         meta['PIXLUNIT'] = 'DN/sec'
         meta['LVL_NUM'] = 1.8
+        meta['EXPTIME'] = 1.0
         return meta, data
 
     def __call__(self, file_):
@@ -66,14 +67,14 @@ class sdo_prep_and_resize_by_pixel(sdo_prep):
             data_new = data_new[pcsize:-pcsize, pcsize:-pcsize]
         else :
             pass
-        meta['naxis1'] = self.isize_target
-        meta['naxis2'] = self.isize_target
+        meta['NAXIS1'] = self.isize_target
+        meta['NAXIS2'] = self.isize_target
         meta['LVL_NUM'] = 2.0
-        meta['cdelt1'] = meta['cdelt1']/ratio
-        meta['crpix1'] = self.isize_target//2 + 0.5
-        meta['cdelt2'] = meta['cdelt2']/ratio
-        meta['crpix2'] = self.isize_target//2 + 0.5
-        meta['r_sun'] = self.rsun_target
+        meta['CDELT1'] = meta['cdelt1']/ratio
+        meta['CRPIX1'] = self.isize_target//2 + 0.5
+        meta['CDELT2'] = meta['cdelt2']/ratio
+        meta['CRPIX2'] = self.isize_target//2 + 0.5
+        meta['R_SUN'] = self.rsun_target
         return meta, data_new
 
     def __call__(self, file_):
@@ -93,8 +94,10 @@ if __name__ == '__main__' :
     P = sdo_prep_and_resize_by_pixel(1024, 392)
     for file_ in list_ :
         meta, data = P(file_)
-        print(meta['r_sun'], meta['cdelt1'], meta['crpix1'], data.shape)
+        print(meta['R_SUN'], meta['CDELT1'], meta['CRPIX1'], meta['EXPTIME'], data.shape)
+        np.save('%s.npy'%(file_), data)
         imsave('%s.png'%(file_), (np.log10((data+1.).clip(1, 10.**4.))*(255./4.)).astype(np.uint8))
+
 
 
 
