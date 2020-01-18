@@ -2,11 +2,21 @@ from sunpy.map import Map
 from sunpy.instr.aia import aiaprep as AP
 from skimage.transform import resize as R
 import numpy as np
-
+import os
+from pandas import read_csv
 
 class sdo_prep:
-    def __init__(self):
-        return 0
+    def __init__(self, csv_degradation='./aia_degradation_v8.csv'):
+        if os.path.exists(csv_degradation):
+            self.db_degradation = read_csv(csv_degradation)
+
+    def t_rec_to_date(self, t_rec):
+        year = t_rec[0:4]
+        month = t_rec[5:7]
+        day = t_rec[8:10]
+        hour = t_rec[11:13]
+        date = '%s-%s-%s-%s-00-00'%(year, month, day, hour)
+        return date
 
     def from_sunpy(self, file_):
         M = AP(Map(file_))
@@ -15,8 +25,14 @@ class sdo_prep:
         return meta, data
 
     def degradation(self, meta, data):
-
-        dg_factor = 1.
+        wavelnth = meta['WAVELNTH']
+        if wavelnth in (94, 131, 171 ,193, 211, 304, 335):
+            t_rec = meta['T_REC']
+            date = self.t_rec_to_date(t_rec)
+            w = np.where(self.db_degradation['date'] == date)
+            dg_factor = self.db_degradation[str(wavelnth)][w[0]]
+        elif wavelnth in (1600, 1700, 4500):
+            dg_factor = 1.
         data = data * dg_factor
         return data
 
