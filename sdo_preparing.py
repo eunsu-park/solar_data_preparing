@@ -97,7 +97,7 @@ class sdo_prep_and_resize_by_pixel(sdo_prep):
         meta1, data1 = self.from_sunpy(file_)
         meta1, data1 = self.norm_exposure(meta1, data1)
         data1 = self.degradation(meta1, data1)
-        meta2, data2 = self.resize(meta1, data1)
+        meta2, data2 = self.resize(meta1.copy(), data1.copy())
         result = {'lev1.8':{'meta':meta1, 'data':data1}, 'lev2.0':{'meta':meta2, 'data':data2}}
         return result
 
