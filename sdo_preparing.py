@@ -30,7 +30,7 @@ class sdo_prep:
             t_rec = meta['T_REC']
             date = self.t_rec_to_date(t_rec)
             w = np.where(self.db_degradation['date'] == date)
-            dg_factor = self.db_degradation[str(wavelnth)][w[0]]
+            dg_factor = self.db_degradation[str(wavelnth)][w[0][0]]
         elif wavelnth in (1600, 1700, 4500):
             dg_factor = 1.
         data = data * dg_factor
