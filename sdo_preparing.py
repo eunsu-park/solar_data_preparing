@@ -94,11 +94,12 @@ class sdo_prep_and_resize_by_pixel(sdo_prep):
         return meta, data_new
 
     def __call__(self, file_):
-        meta, data = self.from_sunpy(file_)
-        meta, data = self.norm_exposure(meta, data)
-        data = self.degradation(meta, data)
-        meta, data = self.resize(meta, data)
-        return meta, data
+        meta1, data1 = self.from_sunpy(file_)
+        meta1, data1 = self.norm_exposure(meta1, data1)
+        data1 = self.degradation(meta1, data1)
+        meta2, data2 = self.resize(meta1, data1)
+        result = {'lev1.8':{'meta':meta1, 'data':data1}, 'lev2.0':{'meta':meta2, 'data':data2}}
+        return result
 
 
 if __name__ == '__main__' :
@@ -109,10 +110,17 @@ if __name__ == '__main__' :
     print(nb)
     P = sdo_prep_and_resize_by_pixel(1024, 392)
     for file_ in list_ :
-        meta, data = P(file_)
-        print(meta['R_SUN'], meta['CDELT1'], meta['CRPIX1'], meta['EXPTIME'], data.shape)
-        np.save('%s.npy'%(file_), data)
-        imsave('%s.png'%(file_), (np.log10((data+1.).clip(1, 10.**4.))*(255./4.)).astype(np.uint8))
+        result = P(file_)
+        lev1 = result['lev1.8']
+        lev2 = result['lev2.0']
+        lev1_meta = lev1['meta']
+        lev1_data = lev1['data']
+        lev2_meta = lev2['meta']
+        lev2_data = lev2['data']
+        print(lev1_meta['R_SUN'], lev1_meta['CDELT1'], lev1_meta['CRPIX1'], lev1_meta['EXPTIME'], lev1_data.shape)
+        print(lev2_meta['R_SUN'], lev2_meta['CDELT1'], lev2_meta['CRPIX1'], lev2_meta['EXPTIME'], lev2_data.shape)
+#        np.save('%s.npy'%(file_), data)
+#        imsave('%s.png'%(file_), (np.log10((data+1.).clip(1, 10.**4.))*(255./4.)).astype(np.uint8))
 
 
 
