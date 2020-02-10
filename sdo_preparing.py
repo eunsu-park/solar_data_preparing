@@ -5,10 +5,27 @@ import numpy as np
 import os
 from pandas import read_csv
 
+
 class sdo_prep:
-    def __init__(self, csv_degradation='./aia_degradation_v8.csv'):
-        if os.path.exists(csv_degradation):
-            self.db_degradation = read_csv(csv_degradation)
+    def __init__(self, resize=False, isize=None, rsun=None):
+        if resize == True:
+            if isize :
+                if type(isize) != int :
+                    raise TypeError('Type(isize) == integer')
+                elif isize % 2 != 0 :
+                    raise ValueError('isize%2 == 0')
+                else :
+                    self.isize = isize
+            else :
+                raise NotImplementedError('resize:True but isize is not implemented')
+            if rsun :
+                if type(rsun) != int :
+                    raise TypeError('Type(rsun) == integer')
+                else:
+                    self.rsun = rsun
+            else :
+                raise NotImplementedError('resize:True but rsun is not implemented')
+        self.resize = resize
 
     def t_rec_to_date(self, t_rec):
         year = t_rec[0:4]
@@ -24,6 +41,61 @@ class sdo_prep:
         data = M.data
         return meta, data
 
+    def resize_by_pixel(self, meta, data, pvalue=0):
+        isize_orig = meta['NAXIS1']
+        rsun_orig = meta['R_SUN']
+        ratio = self.rsun/rsun_orig
+        isize_new = int(isize_orig*ratio)
+        if isize_new % 2 != 0 :
+            isize_new += 1
+        pcsize = (self.isize - isize_new)//2
+        data_new = R(data, (isize_new, isize_new), order = 1, mode='constant', preserve_range=True)
+        if pcsize > 0 :
+            data_new = np.pad(data_new, pcsize, mode='constant', constant_values=pvalue)
+        elif pcsize < 0:
+            data_new = data_new[pcsize:-pcsize, pcsize:-pcsize]
+        else :
+            pass
+        meta['NAXIS1'] = self.isize
+        meta['NAXIS2'] = self.isize
+        meta['LVL_NUM'] = 2.0
+        meta['CDELT1'] = meta['cdelt1']/ratio
+        meta['CRPIX1'] = self.isize//2 + 0.5
+        meta['CDELT2'] = meta['cdelt2']/ratio
+        meta['CRPIX2'] = self.isize//2 + 0.5
+        meta['R_SUN'] = self.rsun
+        return meta, data_new
+
+
+class hmi_prep(sdo_prep):
+    def __init__(self, resize=False, isize=None, rsun=None):
+        super(hmi_prep, self).__init__(resize, isize, rsun)
+        X = np.arange(4096)[:, None]
+        Y = np.arange(4096)[None, :]
+        self.XY = np.sqrt((X-2048.)**2. + (Y-2048.)**2.)
+
+    def cut_radius(self, meta, data):
+        r_sun = meta['R_SUN']
+        Z = np.where(self.XY > r_sun)
+        data[Z] = -5000.
+        meta['LVL_NUM'] = 1.5
+        return meta, data
+
+    def __call__(self, file_):
+        meta1, data1 = self.from_sunpy(file_)
+        meta1, data1 = self.cut_radius(meta1, data1)
+        result = {'lev1.5':{'meta':meta1, 'data':data1}, 'lev2.0':None}
+        if self.resize == True :
+            meta2, data2 = self.resize_by_pixel(meta1.copy(), data1.copy(), pvalue=-5000)
+            result['lev2.0'] = {'meta':meta2, 'data':data2}
+        return result
+
+class aia_prep(sdo_prep):
+    def __init__(self, csv_degradation='./aia_degradation_v8.csv', resize=False, isize=None, rsun=None):
+        super(aia_prep, self).__init__(resize, isize, rsun)
+        if os.path.exists(csv_degradation):
+            self.db_degradation = read_csv(csv_degradation)
+
     def degradation(self, meta, data):
         wavelnth = meta['WAVELNTH']
         if wavelnth in (94, 131, 171 ,193, 211, 304, 335):
@@ -34,96 +106,74 @@ class sdo_prep:
         elif wavelnth in (1600, 1700, 4500):
             dg_factor = 1.
         data = data * dg_factor
-        return data
+        return meta, data
 
     def norm_exposure(self, meta, data):
         exptime = meta['EXPTIME']
         data = data/exptime
         meta['PIXLUNIT'] = 'DN/sec'
-        meta['LVL_NUM'] = 1.8
+        meta['LVL_NUM'] = 1.5
         meta['EXPTIME'] = 1.0
         return meta, data
 
     def __call__(self, file_):
-        meta, data = self.from_sunpy(file_)
-        meta, data = self.norm_exposure(meta, data)
-        data = self.degradation(meta, data)
-        return meta, data
-
-
-class sdo_prep_and_resize_by_pixel(sdo_prep):
-    def __init__(self, isize_target, rsun_target):
-        super(sdo_prep_and_resize_by_pixel, self).__init__()
-        if type(isize_target) != int :
-            raise TypeError('Type(isize_target) == integer')
-        elif isize_target % 2 != 0 :
-            raise ValueError('isize_target%2 == 0')
-        else :
-            self.isize_target = isize_target
-
-        if type(rsun_target) != int :
-            raise TypeError('Type(rsun_target) == integer')
-        elif rsun_target % 2 != 0 :
-            raise ValueError('rsun_target%2 == 0')
-        else:
-            self.rsun_target = rsun_target
-
-    def resize(self, meta, data):
-        isize_orig = meta['NAXIS1']
-        rsun_orig = meta['R_SUN']
-        ratio = self.rsun_target/rsun_orig
-        isize_new = int(isize_orig*ratio)
-        pcsize = (self.isize_target - isize_new)//2
-        if isize_new % 2 != 0 :
-            isize_new += 1
-        data_new = R(data, (isize_new, isize_new), order = 1, mode='constant', preserve_range=True)
-        if pcsize > 0 :
-            data_new = np.pad(data_new, pcsize, mode='constant', constant_values=0)
-        elif pcsize < 0:
-            data_new = data_new[pcsize:-pcsize, pcsize:-pcsize]
-        else :
-            pass
-        meta['NAXIS1'] = self.isize_target
-        meta['NAXIS2'] = self.isize_target
-        meta['LVL_NUM'] = 2.0
-        meta['CDELT1'] = meta['cdelt1']/ratio
-        meta['CRPIX1'] = self.isize_target//2 + 0.5
-        meta['CDELT2'] = meta['cdelt2']/ratio
-        meta['CRPIX2'] = self.isize_target//2 + 0.5
-        meta['R_SUN'] = self.rsun_target
-        return meta, data_new
-
-    def __call__(self, file_):
         meta1, data1 = self.from_sunpy(file_)
         meta1, data1 = self.norm_exposure(meta1, data1)
-        data1 = self.degradation(meta1, data1)
-        meta2, data2 = self.resize(meta1.copy(), data1.copy())
-        result = {'lev1.8':{'meta':meta1, 'data':data1}, 'lev2.0':{'meta':meta2, 'data':data2}}
+        meta1, data1 = self.degradation(meta1, data1)
+        result = {'lev1.5':{'meta':meta1, 'data':data1}, 'lev2.0':None}
+        if self.resize == True :
+            meta2, data2 = self.resize(meta1.copy(), data1.copy())
+            result['lev2.0'] = {'meta':meta2, 'data':data2}
         return result
-
 
 if __name__ == '__main__' :
     from glob import glob
     from imageio import imsave
-    list_ = glob('*.fits')
+    from sunpy.io import fits
+    from multiprocessing import Pool
+    import warnings
+    warnings.filterwarnings('ignore')
+
+    root_ = '/mnt/storage/lee_h/SSPDR/datasets_new/2011_2015/hmi_4'
+
+    list_ = glob('%s/*.fits'%(root_))
     nb = len(list_)
     print(nb)
-    P = sdo_prep_and_resize_by_pixel(1024, 392)
-    for file_ in list_ :
-        result = P(file_)
-        lev1 = result['lev1.8']
-        lev2 = result['lev2.0']
-        lev1_meta = lev1['meta']
-        lev1_data = lev1['data']
-        lev2_meta = lev2['meta']
-        lev2_data = lev2['data']
-        print(lev1_meta['R_SUN'], lev1_meta['CDELT1'], lev1_meta['CRPIX1'], lev1_meta['EXPTIME'], lev1_data.shape)
-        print(lev2_meta['R_SUN'], lev2_meta['CDELT1'], lev2_meta['CRPIX1'], lev2_meta['EXPTIME'], lev2_data.shape)
-#        np.save('%s.npy'%(file_), data)
-#        imsave('%s.png'%(file_), (np.log10((data+1.).clip(1, 10.**4.))*(255./4.)).astype(np.uint8))
+    HP = hmi_prep(resize=True, isize=1024, rsun=392)
+    list_ = list(reversed(list_))
 
+    def run(n):
+        file_ = list_[n]
+        try :
+            hdu = fits.read(file_)[1]
+            date = HP.t_rec_to_date(hdu.header['T_REC'])
+            name = 'hmi.M_45s.%s'%(date)
+            check = glob('%s/lev1/%s.fits'%(root_, name))
+            if len(check) == 0:
+                result = HP(file_)
+                result1 = result['lev1.5']
+                meta1 = result1['meta']
+                data1 = result1['data']
+                result2 = result['lev2.0']
+                meta2 = result2['meta']
+                data2 = result2['data']
+                date = HP.t_rec_to_date(meta1['T_REC'])
+                print('%s: Success'%(file_))
 
+                fits.write('%s/lev1/%s.fits'%(root_, name), data1.astype(np.float32), meta1)
+                np.save('%s/lev1/%s.npy'%(root_, name), data1.astype(np.float32))
+                imsave('%s/lev1/%s.png'%(root_, name), ((data1.clip(-1000, 1000)+1000.)*(255./2000.)).astype(np.uint8))
 
+                np.save('%s/lev2/%s.npy'%(root_, name), data2.astype(np.float32))
+                imsave('%s/lev2/%s.png'%(root_, name), ((data2.clip(-1000, 1000)+1000.)*(255./2000.)).astype(np.uint8))
 
+        except :
+                print('%s: Failed'%(file_))
+
+#    for n in range(nb):
+#        run(n)
+
+    pool = Pool(4)
+    dodo = pool.map(run, range(nb))
 
 
