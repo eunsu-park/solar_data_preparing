@@ -22,18 +22,6 @@ def run_prep(m):
     m_normalized = sunpy.map.Map(data_normalized, meta_normalized)
     return m_normalized
 
-def return_name(meta):
-    t_rec = meta['T_REC']
-    year = int(t_rec[0:4])
-    month = int(t_rec[5:7])
-    day = int(t_rec[8:10])
-    hour = int(t_rec[11:13])
-    minute = int(t_rec[14:16])
-    second = int(t_rec[17:19])
-    wavelnth = int(meta['WAVELNTH'])
-    name_new = 'aia.%d.%04d-%02d-%02d-%02d-%02d-%02d.fits'%(wavelnth, year, month, day, hour, minute, second)
-    return name_new
-
 class aia_prep:
     def __init__(self, do_deconv=False, do_degrad=True):
         self.do_deconv = do_deconv
