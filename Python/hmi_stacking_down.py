@@ -8,12 +8,12 @@ root_hmi = '/nas/obsdata/sdo/hmi/M_45s'
 
 root_save = '/userhome/park_e/Datasets/hmi_denoising'
 year = 2011
-month = 1
+month = 2
 day = 1
-hour = 7
+hour = 0
 
-date = '%04d-%02d-%02dT%02d:00:00.000'%(year, month, day, hour)
-date_end = '%04d-%02d-31T23:59:59.999'%(year, month)
+date     = '%04d-%02d-%02dT%02d:00:00.000'%(year, month, day, hour)
+date_end = '%04d-12-31T23:59:59.999'%(year)
 date = Time(date)
 date_end = Time(date_end)
 
