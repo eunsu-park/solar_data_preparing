@@ -8,8 +8,8 @@ root_hmi = '/nas/obsdata/sdo/hmi/M_45s'
 
 root_save = '/userhome/park_e/Datasets/hmi_denoising'
 year = 2011
-month = 2
-day = 1
+month = 6
+day = 5
 hour = 0
 
 date     = '%04d-%02d-%02dT%02d:00:00.000'%(year, month, day, hour)
@@ -52,14 +52,14 @@ while date < date_end :
         if not os.path.exists(path_save):
             os.makedirs(path_save)
 
-        f = Fido.fetch(q, path='%s/{file}'%(path_save), progress=False)
+        f = Fido.fetch(q, path='%s/{file}'%(path_save), progress=False, max_conn=7)
         e = f.errors
         while len(e) > 0 :
-            f = Fido.fetch(f, progress=False)
+            f = Fido.fetch(f, progress=False, max_conn=7)
             e = f.errors
 
     date += 1./24.
-    time.sleep(60)
+#    time.sleep(60)
             
             
 
